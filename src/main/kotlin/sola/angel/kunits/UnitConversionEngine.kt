@@ -7,6 +7,7 @@ class UnitConversionEngine {
 
     private val unitGroups: Set<UnitGroup> = ConfigReader().parse()
     private val expander = UnitExpander()
+    private val canConvertCache: MutableMap<String, Boolean> = mutableMapOf()
     private val factorsCache: MutableMap<String, Double> = mutableMapOf()
 
     fun convert(amount: Double, from: String, to: String): Double {
@@ -26,13 +27,30 @@ class UnitConversionEngine {
             expander.expand(to)
         )
 
-    private fun canConvert(from: UnitExpansion, to: UnitExpansion): Boolean {
-        // TODO
-        return true
+    private fun canConvert(source: UnitExpansion, target: UnitExpansion): Boolean {
+        val cacheKey = makeCacheKey(source, target)
+        if (canConvertCache.containsKey(cacheKey)) {
+            return canConvertCache[cacheKey]!!
+        }
+
+        val srcNumUnits = source.numerator.map { groupForUnitNamed(it) }
+        val srcDenUnits = source.denominator.map { groupForUnitNamed(it) }
+        val tgtNumUnits = target.numerator.map { groupForUnitNamed(it) }
+        val tgtDenUnits = target.denominator.map { groupForUnitNamed(it) }
+
+        if (srcNumUnits.contains(null) || srcDenUnits.contains(null) ||
+            tgtNumUnits.contains(null) || tgtDenUnits.contains(null)
+        ) {
+            return false
+        }
+
+        val canConvert = srcNumUnits == tgtNumUnits && srcDenUnits == tgtDenUnits
+        canConvertCache[cacheKey] = canConvert
+        return canConvert
     }
 
     private fun compoundFactor(sourceUnits: UnitExpansion, targetUnits: UnitExpansion): Double {
-        val cacheKey = "$sourceUnits -> $targetUnits"
+        val cacheKey = makeCacheKey(sourceUnits, targetUnits)
         if (factorsCache.containsKey(cacheKey)) {
             return factorsCache[cacheKey]!!
         }
@@ -51,7 +69,9 @@ class UnitConversionEngine {
             .fold(1.0) { acc, factor -> acc * factor }
 
     private fun simpleConversionFactor(sourceUnits: String, targetUnits: String): Double =
-        unitGroups
-            .find { it.hasUnitNamed(sourceUnits) }!!
-            .conversionFactor(sourceUnits, targetUnits)
+        groupForUnitNamed(sourceUnits)!!.conversionFactor(sourceUnits, targetUnits)
+
+    private fun groupForUnitNamed(name: String): UnitGroup? = unitGroups.find { it.hasUnitNamed(name) }
+
+    private fun makeCacheKey(source: UnitExpansion, target: UnitExpansion): String = "$source -> $target"
 }

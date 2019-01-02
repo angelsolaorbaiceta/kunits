@@ -1,12 +1,33 @@
 package sola.angel.kunits
 
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class ConversionTest {
 
     private val errorEpsilon = 1E-5
     private val engine = UnitConversionEngine()
+
+    @Test
+    fun `cannot convert unknown units`() {
+        assertFalse(
+            engine.canConvert("N", "foo")
+        )
+    }
+
+    @Test
+    fun `cannot convert from units from different groups`() {
+        assertFalse(
+            engine.canConvert("N", "cm")
+        )
+    }
+
+    @Test
+    fun `can convert units of same group but different systems`() {
+        assertTrue(
+            engine.canConvert("cm", "ft")
+        )
+    }
 
     @Test
     fun `convert from cm to m`() {
