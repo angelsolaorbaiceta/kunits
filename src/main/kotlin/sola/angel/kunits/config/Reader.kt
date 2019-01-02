@@ -51,15 +51,26 @@ internal class ConfigReader {
             .toMap()
     }
 
-    private fun systemConversionsFrom(json: JSONArray): Set<SystemsConversion> {
-        return emptySet()
-    }
+    private fun systemConversionsFrom(json: JSONArray): Set<SystemsConversion> =
+        json
+            .map {
+                val jsonObj = it as JSONObject
+                SystemsConversion(
+                    from = jsonObj.getString(fromKey),
+                    to = jsonObj.getString(toKey),
+                    factor = jsonObj.getDouble(factorKey)
+                )
+            }
+            .toSet()
 
     companion object {
         private const val systemsKey = "systems"
         private const val nameKey = "name"
         private const val factorsKey = "factors"
         private const val systemFactorsKey = "system_conversion_factors"
+        private const val fromKey = "from"
+        private const val toKey = "to"
+        private const val factorKey = "factor"
 
         private val conversionsJSON: JSONObject by lazy {
             JSONObject(
